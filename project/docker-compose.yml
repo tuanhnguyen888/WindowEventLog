@@ -1,0 +1,99 @@
+version: '3'
+
+services:
+#  broker-service:
+#    build:
+#      context: ./../broker-service
+#      dockerfile: ../broker-service/broker-service.Dockerfile
+#    restart: always
+#    ports:
+#      - "8080:80"
+#    deploy:
+#      mode: replicated
+#      replicas: 1
+
+#  logger-service:
+#    build:
+#      context: ./../saveEventlog
+#      dockerfile: ./../saveEventlog-service/saveEventlog-service.dockerfile
+#    restart: always
+#    deploy:
+#      mode: replicated
+#      replicas: 1
+
+#  listener-service:
+#    build:
+#      context: ./../listener-service
+#      dockerfile: ../listener-service/listener-service.Dockerfile
+#    restart: always
+#    ports:
+#      - "8082:80"
+#    deploy:
+#      mode: replicated
+#      replicas: 1
+
+  postgres:
+    image: 'postgres:14.0'
+    ports:
+      - "5434:5432"
+    restart: always
+    deploy:
+      mode: replicated
+      replicas: 1
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: users
+    volumes:
+      - ./db-data/postgres/:/var/lib/postgresql/data/
+
+  redis:
+    image: "redis:latest"
+    command: redis-server /usr/local/etc/redis/redis.conf
+    ports:
+      - "6380:6379"
+    volumes:
+      - ./db-data/redis/:/usr/local/etc/redis/redis.conf
+
+  elasticsearch:
+    image: elasticsearch:7.4.0
+    container_name: elasticsearch
+    restart: always
+    environment:
+      - xpack.security.enabled=false
+      - discovery.type=single-node
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+    cap_add:
+      - IPC_LOCK
+    volumes:
+      - ./db-data/elasticsearch/:/usr/share/elasticsearch/data
+    ports:
+      - 9200:9200
+
+#  kibana:
+#    container_name: kibana
+#    image: kibana:7.4.0
+#    restart: always
+#    environment:
+#      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200    # address of elasticsearch docker container which kibana will connect
+#    ports:
+#      - 5601:5601
+#    depends_on:
+#      - elasticsearch                # kibana will start when elasticsearch has started
+
+
+  rabbitmq:
+    image: 'rabbitmq:3.9-alpine'
+    ports:
+      - "5672:5672"
+    deploy:
+      mode: replicated
+      replicas: 1
+    volumes:
+      - ./db-data/rabbitmq/:/var/lib/rabbitmq/

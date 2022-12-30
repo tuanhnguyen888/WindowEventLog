@@ -6,7 +6,7 @@ import (
 	"saveEventLog/database"
 )
 
-var port = "81"
+var port = "82"
 
 func main() {
 
@@ -25,7 +25,6 @@ func main() {
 	app := gin.New()
 	app.Use(gin.Recovery())
 	app.Use(gin.Logger())
-
 	app.Use(CORSMiddleware())
 
 	app.GET(
@@ -37,8 +36,6 @@ func main() {
 		"/find",
 		saveLogHandler.showLogFromPG,
 	)
-
-	log.Printf("Starting broker service on port 80\n")
 
 	err = app.Run(":" + port)
 	if err != nil {

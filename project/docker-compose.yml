@@ -11,16 +11,18 @@ services:
 #    deploy:
 #      mode: replicated
 #      replicas: 1
-
-#  logger-service:
+#
+#  savelog-service:
 #    build:
-#      context: ./../saveEventlog
-#      dockerfile: ./../saveEventlog-service/saveEventlog-service.dockerfile
+#      context: ./../saveEventlog-service
+#      dockerfile: ./../saveEventlog-service/saveEventlog-service.Dockerfile
 #    restart: always
+#    ports:
+#      - "8081:80"
 #    deploy:
 #      mode: replicated
 #      replicas: 1
-
+#
 #  listener-service:
 #    build:
 #      context: ./../listener-service
@@ -49,11 +51,11 @@ services:
 
   redis:
     image: "redis:latest"
-    command: redis-server /usr/local/etc/redis/redis.conf
+    command: redis-server /var/lib/etc/redis/redis.conf
     ports:
       - "6380:6379"
     volumes:
-      - ./db-data/redis/:/usr/local/etc/redis/redis.conf
+      - ./db-data/redis/:/var/lib/etc/redis/redis.conf
 
   elasticsearch:
     image: elasticsearch:7.4.0
@@ -72,7 +74,7 @@ services:
     cap_add:
       - IPC_LOCK
     volumes:
-      - ./db-data/elasticsearch/:/usr/share/elasticsearch/data
+      - ./db-data/elasticsearch/:/var/lib/elasticsearch/data
     ports:
       - 9200:9200
 

@@ -1,17 +1,11 @@
 package main
 
 import (
-	"broker/event"
 	"bytes"
-	"context"
 	"encoding/json"
-	"fmt"
 	"github.com/gin-gonic/gin"
-	winlog "github.com/ofcoursedude/gowinlog"
-	amqp "github.com/rabbitmq/amqp091-go"
-	"log"
+	"io"
 	"net/http"
-	"time"
 )
 
 type jsonResponse struct {
@@ -20,18 +14,11 @@ type jsonResponse struct {
 	Data    any    `json:"data,omitempty"`
 }
 
-type logEvent struct {
-	Level        string `json:"level" `
-	ProviderName string `json:"provider_name" `
-	Msg          string `json:"msg"`
-	Created      int64  `json:"created"`
+type RequestPayload struct {
+	Action string `json:"action"`
 }
 
-type brokerHandler struct {
-	conn *amqp.Connection
-}
-
-func broker(ctx *gin.Context) {
+func Broker(ctx *gin.Context) {
 	payload := jsonResponse{
 		Error:   false,
 		Message: "Hit the broker",
@@ -44,98 +31,115 @@ func broker(ctx *gin.Context) {
 	)
 }
 
-func (b *brokerHandler) pushToQueue(body logEvent, ctx context.Context) error {
+func Handle(ctx *gin.Context) {
+	var requestPayload RequestPayload
 
-	reqBodyBytes := new(bytes.Buffer)
-	err := json.NewEncoder(reqBodyBytes).Encode(body)
+	err := ctx.BindJSON(&requestPayload)
 	if err != nil {
-		return err
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "bad request"})
+		return
 	}
 
-	ch, err := b.conn.Channel()
-	if err != nil {
-		return err
+	switch requestPayload.Action {
+	case "saveDbPg":
+		SavePdDb(ctx)
+	case "showDb":
+		Show(ctx)
+	default:
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Unknow Action"})
 	}
-
-	q, err := event.DeclareQueue(ch)
-	if err != nil {
-		return err
-	}
-	//log.Printf("break point")
-
-	err = ch.PublishWithContext(ctx,
-		"",
-		q.Name,
-		false,
-		false,
-		amqp.Publishing{
-			ContentType: "application/json",
-			Body:        reqBodyBytes.Bytes(),
-		})
-	if err != nil {
-		return err
-	}
-
-	log.Printf(" [x] Sent %#v\n", body)
-
-	return nil
 }
 
-func getWatcher() (*winlog.WinLogWatcher, error) {
-	log.Println("Starting listen win log event ...")
-	watcher, err := winlog.NewWinLogWatcher()
+func SavePdDb(ctx *gin.Context) {
+	message := struct {
+		Message string
+	}{}
+
+	jsonData, _ := json.MarshalIndent(message, "", "\t")
+	logServiceURL := "http://localhost:82/savePg"
+
+	request, err := http.NewRequest("GET", logServiceURL, bytes.NewBuffer(jsonData))
 	if err != nil {
-		return nil, err
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "dont new request"})
+		return
 	}
 
-	return watcher, nil
+	request.Header.Set("Content-Type", "application/json")
+	client := &http.Client{}
+
+	response, err := client.Do(request)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	defer func(Body io.ReadCloser) {
+		_ = Body.Close()
+	}(response.Body)
+
+	if response.StatusCode != http.StatusOK {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	payload := jsonResponse{
+		Error:   false,
+		Message: "Add success",
+	}
+
+	ctx.JSON(
+		http.StatusAccepted,
+		gin.H{
+			"message": payload,
+		},
+	)
 }
 
-// getWindowsEventLog
-func (b *brokerHandler) getWindowsEventLog() {
-	watcher, err := getWatcher()
+func Show(ctx *gin.Context) {
+	message := struct {
+		Data any
+	}{}
+
+	jsonData, _ := json.MarshalIndent(message, "", "\t")
+	logServiceURL := "http://localhost:82/find"
+
+	request, err := http.NewRequest("GET", logServiceURL, bytes.NewBuffer(jsonData))
 	if err != nil {
-		panic(err)
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "dont new request"})
+		return
 	}
 
-	err = watcher.SubscribeFromNow("Application", "*")
+	request.Header.Set("Content-Type", "application/json")
+	client := &http.Client{}
+
+	response, err := client.Do(request)
 	if err != nil {
-		panic(err)
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	defer func(Body io.ReadCloser) {
+		_ = Body.Close()
+	}(response.Body)
+
+	if response.StatusCode != http.StatusOK {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	err = json.NewDecoder(response.Body).Decode(&message)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	for {
-		select {
-		case evt := <-watcher.Event():
-			// Print the event struct
-			// fmt.Printf("\nEvent: %v\n", evt)
-			// or print basic output
-
-			timeUnix := evt.Created.UnixMicro()
-			if evt.LevelText == "" {
-				evt.LevelText = "Information"
-			}
-			body := logEvent{
-				Level:        evt.LevelText,
-				ProviderName: evt.ProviderName,
-				Msg:          evt.Msg,
-				Created:      timeUnix,
-			}
-
-			//log.Printf(" [x] Sent %#v\n", body)
-
-			err = b.pushToQueue(body, ctx)
-			if err != nil {
-				panic(err)
-			}
-		case err := <-watcher.Error():
-			fmt.Printf("\nError: %v\n\n", err)
-		default:
-			// If no event is waiting, need to wait or do something else, otherwise
-			// the app fails on deadlock.
-			<-time.After(1 * time.Millisecond)
-		}
+	payload := jsonResponse{
+		Error:   false,
+		Message: "show data",
+		Data:    message.Data,
 	}
+
+	ctx.JSON(
+		http.StatusAccepted,
+		gin.H{
+			"message": payload,
+		},
+	)
 }

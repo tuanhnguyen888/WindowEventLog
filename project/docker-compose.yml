@@ -99,3 +99,31 @@ services:
       replicas: 1
     volumes:
       - ./db-data/rabbitmq/:/var/lib/rabbitmq/
+
+
+  logstash:
+    build:
+      context: ./../logstash
+
+#    env_file: .env
+    volumes:
+      - ./../logstash/config/pipelines.yml:/usr/share/logstash/config/pipelines.yml
+      - ./../logstash/pipelines/:/usr/share/logstash/pipeline/
+    restart: always
+    depends_on:
+      - rabbitmq
+      - elasticsearch
+    deploy:
+      mode: replicated
+      replicas: 1
+
+volumes:
+  postgres:
+    driver: local
+  rabbitmq:
+    driver: local
+  redis:
+    driver: local
+  elasticsearch:
+    driver: local
+

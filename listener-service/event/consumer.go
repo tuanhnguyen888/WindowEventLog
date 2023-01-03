@@ -1,7 +1,6 @@
 package event
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/go-redis/redis"
@@ -96,18 +95,18 @@ func (consumer *Consumer) Listen() error {
 
 func (consumer *Consumer) handlePayload(payload logEvent) {
 	dataJson, err := json.Marshal(payload)
-	js := string(dataJson)
+	//js := string(dataJson)
 	if err != nil {
 		log.Println(err)
 	}
 
-	ind, err := consumer.elasticClient.Index().
-		Index("logs").
-		BodyJson(js).
-		Do(context.Background())
-	if err != nil {
-		log.Println(err, ind)
-	}
+	//ind, err := consumer.elasticClient.Index().
+	//	Index("logs").
+	//	BodyJson(js).
+	//	Do(context.Background())
+	//if err != nil {
+	//	log.Println(err, ind)
+	//}
 
 	err = consumer.redisClient.Set(strconv.FormatInt(payload.Created, 10), dataJson, 30*24*time.Hour).Err()
 	if err != nil {

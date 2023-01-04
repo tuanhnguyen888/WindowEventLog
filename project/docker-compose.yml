@@ -99,20 +99,18 @@ services:
 
 
   logstash:
-    build:
-      context: ./../logstash
-
+    image: 'docker.elastic.co/logstash/logstash:8.5.3'
 #    env_file: .env
     volumes:
-      - ./../logstash/config/pipelines.yml:/usr/share/logstash/config/pipelines.yml
-      - ./../logstash/pipelines/:/usr/share/logstash/pipeline/
+      - ./../logstash/pipelines/:/logstash_dir
+    command: logstash -f /logstash_dir/logstash.conf
     restart: always
     depends_on:
       - rabbitmq
       - elasticsearch
-    deploy:
-      mode: replicated
-      replicas: 1
+    ports:
+      - "5800:5800"
+
 
 volumes:
   postgres:

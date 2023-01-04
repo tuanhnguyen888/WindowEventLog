@@ -59,7 +59,7 @@ func connect() (*amqp.Connection, error) {
 	var connection *amqp.Connection
 
 	for {
-		conn, err := amqp.Dial("amqp://guest:guest@localhost:5672/")
+		conn, err := amqp.Dial("amqp://guest:guest@rabbitmq")
 		if err != nil {
 			log.Panic("not yet ready ....")
 			counts++

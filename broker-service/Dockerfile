@@ -8,7 +8,7 @@ COPY go.mod ./
 COPY go.sum ./
 RUN go mod download && go mod verify
 COPY . .
-RUN go build -v -o /savelog .
+RUN go build -v -o /brokerapp ./cmd/api
 
 
 #build multi stage
@@ -16,6 +16,6 @@ FROM alpine:latest
 
 RUN mkdir /app
 
-COPY --from=builder /savelog /app/savelog
+COPY --from=builder /brokerapp /app/brokerapp
 
-ENTRYPOINT [ "/app/savelog" ]
+ENTRYPOINT [ "/app/brokerapp" ]

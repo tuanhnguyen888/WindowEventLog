@@ -8,13 +8,13 @@ COPY go.mod ./
 COPY go.sum ./
 RUN go mod download && go mod verify
 COPY . .
-RUN go build -v -o /savelog .
+RUN go build -o /savelog ./cmd/api
 
 
 #build multi stage
-FROM alpine:latest
+WORKDIR /app
 
-RUN mkdir /app
+FROM alpine:latest
 
 COPY --from=builder /savelog /app/savelog
 

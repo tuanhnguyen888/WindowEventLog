@@ -56,7 +56,7 @@ func SavePdDb(ctx *gin.Context) {
 	}{}
 
 	jsonData, _ := json.MarshalIndent(message, "", "\t")
-	logServiceURL := "http://localhost:82/savePg"
+	logServiceURL := "http://savelog-service/savePg"
 
 	request, err := http.NewRequest("GET", logServiceURL, bytes.NewBuffer(jsonData))
 	if err != nil {
@@ -100,7 +100,7 @@ func Show(ctx *gin.Context) {
 	}{}
 
 	jsonData, _ := json.MarshalIndent(message, "", "\t")
-	logServiceURL := "http://localhost:82/find"
+	logServiceURL := "http://savelog-service/find"
 
 	request, err := http.NewRequest("GET", logServiceURL, bytes.NewBuffer(jsonData))
 	if err != nil {

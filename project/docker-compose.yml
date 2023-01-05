@@ -1,4 +1,4 @@
-version: '3'
+version: '3.7'
 
 services:
   broker-service:
@@ -10,26 +10,26 @@ services:
     deploy:
       mode: replicated
       replicas: 1
-#
-#  savelog-service:
-#    build:
-#      context: ./../saveEventlog-service
-#    restart: always
-#    ports:
-#      - "8081:80"
-#    deploy:
-#      mode: replicated
-#      replicas: 1
-#
-#  listener-service:
-#    build:
-#      context: ./../listener-service
-#    restart: always
-#    ports:
-#      - "8082:80"
-#    deploy:
-#      mode: replicated
-#      replicas: 1
+
+  savelog-service:
+    build:
+      context: ./../saveEventlog-service
+    restart: always
+    ports:
+      - "8081:81"
+    deploy:
+      mode: replicated
+      replicas: 1
+
+  listener-service:
+    build:
+      context: ./../listener-service
+    restart: always
+    ports:
+      - "8082:82"
+    deploy:
+      mode: replicated
+      replicas: 1
 
   postgres:
     image: 'postgres:14.0'
@@ -99,17 +99,15 @@ services:
 
 
   logstash:
-    image: 'docker.elastic.co/logstash/logstash:8.5.3'
-#    env_file: .env
+    build:
+      context: ./../logstash
+      dockerfile: ./../logstash/Dockerfile
     volumes:
-      - ./../logstash/pipelines/:/logstash_dir
-    command: logstash -f /logstash_dir/logstash.conf
-    restart: always
+      - ./../logstash/logstash.conf:/usr/share/logstash/pipeline/logstash.conf
+    command: logstash -f /usr/share/logstash/pipeline/logstash.conf
     depends_on:
       - rabbitmq
       - elasticsearch
-    ports:
-      - "5800:5800"
 
 
 volumes:

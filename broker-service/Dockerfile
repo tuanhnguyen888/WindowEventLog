@@ -1,20 +1,19 @@
 #base go image
 FROM golang:1.19-alpine as builder
 
-
 WORKDIR /usr/src/app
 
 COPY go.mod ./
 COPY go.sum ./
 RUN go mod download && go mod verify
 COPY . .
-RUN go build -v -o /brokerapp ./cmd/api
+RUN go build -o /brokerapp ./cmd/api
 
 
 #build multi stage
-FROM alpine:latest
+WORKDIR /app
 
-RUN mkdir /app
+FROM alpine:latest
 
 COPY --from=builder /brokerapp /app/brokerapp
 

@@ -6,7 +6,7 @@ import (
 	"saveEventLog/database"
 )
 
-var port = "82"
+var port = "81"
 
 func main() {
 
